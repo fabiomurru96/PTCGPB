@@ -1123,17 +1123,20 @@ KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx :
 		;bboxAndPause(X1, Y1, X2, Y2)
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, X1, Y1, X2, Y2, searchVariation)
+
+		if(takeScreen)
+		{
+			pCropped := Gdip_CloneBitmapArea(pBitmap,X1,Y1,X2-X1,Y2-Y1)
+			Gdip_SaveBitmapToFile(pCropped, A_ScriptDir "\" defaultLanguage "\" imageName ".png")
+			Gdip_DisposeImage(pCropped)
+			takeScreen := false
+		}
+
 		Gdip_DisposeImage(pNeedle)
 		Gdip_DisposeImage(pBitmap)
 		if (!confirmed && vRet = 1) {
 			confirmed := true
 		} 
-		else if(takeScreen)
-		{
-			pCropped := Gdip_CropBitmap(pBitmap, X1, Y1, X2, Y2)
-			Gdip_SaveBitmapToFile(pCropped, A_ScriptDir imageName ".png")
-			takeScreen := false
-		}
 		else {
 			if(imageName = "Skip3") {
 				Sleep, 1000
