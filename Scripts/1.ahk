@@ -1057,7 +1057,7 @@ CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL
 }
 
 KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx := 0, clicky := 0, sleepTime := "", skip := false, safeTime := 0) {
-	global winTitle, Variation, failSafe, confirmed
+	global winTitle, Variation, failSafe, confirmed, takeScreen
 	if(searchVariation = "")
 		searchVariation := Variation
 	if (sleepTime = "") {
@@ -1127,7 +1127,14 @@ KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx :
 		Gdip_DisposeImage(pBitmap)
 		if (!confirmed && vRet = 1) {
 			confirmed := true
-		} else {
+		} 
+		else if(takeScreen)
+		{
+			pCropped := Gdip_CropBitmap(pBitmap, X1, Y1, X2, Y2)
+			Gdip_SaveBitmapToFile(pCropped, A_ScriptDir imageName ".png")
+			takeScreen := false
+		}
+		else {
 			if(imageName = "Skip3") {
 				Sleep, 1000
 			adbClick(259, 79)
@@ -1318,7 +1325,7 @@ checkBorder(wonderpick := true) {
 		searchVariation := 5
 	}
 	else {
-		Sleep, 1000
+		Sleep, 2000
 		searchVariation := 15
 	}
 	pBitmap := from_window(WinExist(winTitle))
@@ -1886,6 +1893,14 @@ from_window(ByRef image) {
 ~F7::ExitApp
 ~F8::ToggleTestScript()
 ;~F9::restartGameInstance("F9")
+
+~F10::TakeScreenCrop()
+
+TakeScreenCrop()
+{
+	global takeScreen
+	takeScreen := true
+}
 
 bboxAndPause(X1, Y1, X2, Y2, doPause := False) {
 	BoxWidth := X2-X1
