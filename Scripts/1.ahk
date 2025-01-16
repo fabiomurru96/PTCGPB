@@ -32,9 +32,9 @@ global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipT
 	IniRead, falsePositive, %A_ScriptDir%\..\Settings.ini, UserSettings, falsePositive, No
 	IniRead, skipInvalidGP, %A_ScriptDir%\..\Settings.ini, UserSettings, skipInvalidGP, No
 	IniRead, godPack, %A_ScriptDir%\..\Settings.ini, UserSettings, godPack, 1
-	IniRead, discordWebhookURL, Settings.ini, UserSettings, discordWebhookURL, ""
-    IniRead, discordUserId, Settings.ini, UserSettings, discordUserId, ""
-    IniRead, deleteMethod, Settings.ini, UserSettings, deleteMethod, File
+	IniRead, discordWebhookURL, %A_ScriptDir%\..\Settings.ini, UserSettings, discordWebhookURL, ""
+    IniRead, discordUserId, %A_ScriptDir%\..\Settings.ini, UserSettings, discordUserId, ""
+    IniRead, deleteMethod, %A_ScriptDir%\..\Settings.ini, UserSettings, deleteMethod, File
 	
 	adbPath := folderPath . "\MuMuPlayerGlobal-12.0\shell\adb.exe"
 	
@@ -211,10 +211,9 @@ global winTitle, changeDate, failSafe, openPack, Delay, failSafeTime, StartSkipT
 	; imagePath := A_ScriptDir . "\" . defaultLanguage . "\"
 	; Path = %imagePath%App.png
 	; pBitmap := from_window(WinExist(winTitle))
-	; pNeedle := Gdip_CreateBitmapFromFile(Path)
+	; pNeedle := GetNeedle(Path)
 	
 	; vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, 40)
-	; Gdip_DisposeImage(pNeedle)
 	; Gdip_DisposeImage(pBitmap)
 	; if (vRet = 1) {
 		; CreateStatusMessage("Started on home page opening app..." )
@@ -976,28 +975,28 @@ else {
 	restartGameInstance("New Run", false)
 }
 
-if(deleteAccount := true) {
+if(deleteAccount = true) {
 	CreateStatusMessage("Exiting GP Test Mode")
 	deleteAccount := false
 }
-	
-rerolls++
-AppendToJsonFile(4)
-packs += 4
-totalSeconds := Round((A_TickCount - rerollTime) / 1000) ; Total time in seconds
-avgtotalSeconds := Round(totalSeconds / rerolls) ; Total time in seconds
-minutes := Floor(avgtotalSeconds / 60) ; Total minutes
-seconds := Mod(avgtotalSeconds, 60) ; Remaining seconds within the minute
-mminutes := Floor(totalSeconds / 60) ; Total minutes
-sseconds := Mod(totalSeconds, 60) ; Remaining seconds within the minute
-CreateStatusMessage("Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls, 25, 0, 510)
-LogToFile("Packs: " . packs . " Total time: " . mminutes . "m " . sseconds . "s Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls)
-
+else {
+	rerolls++
+	AppendToJsonFile(4)
+	packs += 4
+	totalSeconds := Round((A_TickCount - rerollTime) / 1000) ; Total time in seconds
+	avgtotalSeconds := Round(totalSeconds / rerolls) ; Total time in seconds
+	minutes := Floor(avgtotalSeconds / 60) ; Total minutes
+	seconds := Mod(avgtotalSeconds, 60) ; Remaining seconds within the minute
+	mminutes := Floor(totalSeconds / 60) ; Total minutes
+	sseconds := Mod(totalSeconds, 60) ; Remaining seconds within the minute
+	CreateStatusMessage("Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls, 25, 0, 510)
+	LogToFile("Packs: " . packs . " Total time: " . mminutes . "m " . sseconds . "s Avg: " . minutes . "m " . seconds . "s Runs: " . rerolls)
+}
 }
 return
 
 CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
-	global winTitle, Variation, failSafe
+	global winTitle, Variation, failSafe, takeLanguageScreens
 	if(searchVariation = "")
 		searchVariation := Variation
 	imagePath := A_ScriptDir . "\" . defaultLanguage . "\"
@@ -1006,7 +1005,7 @@ CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL
 	CreateStatusMessage(imageName)
 	pBitmap := from_window(WinExist(winTitle))
 	Path = %imagePath%%imageName%.png
-	pNeedle := Gdip_CreateBitmapFromFile(Path)
+	pNeedle := GetNeedle(Path)
 
 	; 100% scale changes
 	if (scaleParam = 287) {
@@ -1026,7 +1025,16 @@ CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL
 
 	; ImageSearch within the region
 	vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, X1, Y1, X2, Y2, searchVariation)
-	Gdip_DisposeImage(pNeedle)
+
+	if(takeLanguageScreens)
+	{
+		pCropped := Gdip_CloneBitmapArea(pBitmap,X1,Y1,X2-X1,Y2-Y1)
+		Gdip_SaveBitmapToFile(pCropped, A_ScriptDir "\TempScreens\" defaultLanguage "\" imageName ".png")
+		Gdip_DisposeImage(pCropped)
+		NeedleBitmaps.Delete(Path) ; Delete from Map and dispose to be able to substitute the needle
+		Gdip_DisposeImage(pNeedle)
+	}
+
 	Gdip_DisposeImage(pBitmap)
 	if(EL = 0)
 		GDEL := 1
@@ -1037,10 +1045,9 @@ CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL
 	}
 	pBitmap := from_window(WinExist(winTitle))
 	Path = %imagePath%App.png
-	pNeedle := Gdip_CreateBitmapFromFile(Path)
+	pNeedle := GetNeedle(Path)
 	; ImageSearch within the region
 	vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, searchVariation)
-	Gdip_DisposeImage(pNeedle)
 	Gdip_DisposeImage(pBitmap)
 	if (vRet = 1) {
 		CreateStatusMessage("At home page. Opening app..." )
@@ -1057,7 +1064,7 @@ CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL
 }
 
 KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx := 0, clicky := 0, sleepTime := "", skip := false, safeTime := 0) {
-	global winTitle, Variation, failSafe, confirmed, takeScreen
+	global winTitle, Variation, failSafe, confirmed, takeLanguageScreens
 	if(searchVariation = "")
 		searchVariation := Variation
 	if (sleepTime = "") {
@@ -1119,20 +1126,21 @@ KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx :
 
 		pBitmap := from_window(WinExist(winTitle))
 		Path = %imagePath%%imageName%.png
-		pNeedle := Gdip_CreateBitmapFromFile(Path)
+		pNeedle := GetNeedle(Path)
 		;bboxAndPause(X1, Y1, X2, Y2)
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, X1, Y1, X2, Y2, searchVariation)
 
-		if(takeScreen)
+		if(takeLanguageScreens)
 		{
+			global NeedleBitmaps
 			pCropped := Gdip_CloneBitmapArea(pBitmap,X1,Y1,X2-X1,Y2-Y1)
-			Gdip_SaveBitmapToFile(pCropped, A_ScriptDir "\" defaultLanguage "\" imageName ".png")
+			Gdip_SaveBitmapToFile(pCropped, A_ScriptDir "\TempScreens\" defaultLanguage "\" imageName ".png")
 			Gdip_DisposeImage(pCropped)
-			takeScreen := false
+			NeedleBitmaps.Delete(Path)
+			Gdip_DisposeImage(pNeedle)
 		}
 
-		Gdip_DisposeImage(pNeedle)
 		Gdip_DisposeImage(pBitmap)
 		if (!confirmed && vRet = 1) {
 			confirmed := true
@@ -1153,10 +1161,9 @@ KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx :
 
 		pBitmap := from_window(WinExist(winTitle))
 		Path = %imagePath%Error1.png
-		pNeedle := Gdip_CreateBitmapFromFile(Path)
+		pNeedle := GetNeedle(Path)
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, searchVariation)
-		Gdip_DisposeImage(pNeedle)
 		Gdip_DisposeImage(pBitmap)
 		if (vRet = 1) {
 			CreateStatusMessage("Error message in " scriptName " Clicking retry..." )
@@ -1168,10 +1175,9 @@ KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx :
 		}
 		pBitmap := from_window(WinExist(winTitle))
 		Path = %imagePath%App.png
-		pNeedle := Gdip_CreateBitmapFromFile(Path)
+		pNeedle := GetNeedle(Path)
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 15, 155, 270, 420, searchVariation)
-		Gdip_DisposeImage(pNeedle)
 		Gdip_DisposeImage(pBitmap)
 		if (vRet = 1) {
 			CreateStatusMessage("At home page. Opening app..." )
@@ -1241,39 +1247,7 @@ killGodPackInstance(){
 
 restartGameInstance(reason, RL := true){
 	global Delay, scriptName, adbShell, adbPath, adbPort
-	RetryCount := 0
-	MaxRetries := 10
-	Loop {
-		try {
-			if (!adbShell) {
-				adbShell := ComObjCreate("WScript.Shell").Exec(adbPath . " -s 127.0.0.1:" . adbPort . " shell")
-				; Extract the Process ID
-				processID := adbShell.ProcessID
-
-				; Wait for the console window to open using the process ID
-				WinWait, ahk_pid %processID%
-
-				; Minimize the window using the process ID
-				WinMinimize, ahk_pid %processID%
-				
-				adbShell.StdIn.WriteLine("su")
-			}
-			else if (adbShell.Status != 0) {
-				Sleep, 1000
-			}
-			else {
-				break
-			}
-		}
-		catch {
-			RetryCount++
-			if(RetryCount > MaxRetries) {
-				CreateStatusMessage("Failed to connect to shell")
-				Pause
-			}
-		}
-		Sleep, 1000
-	}
+	initializeAdbShell()
 	CreateStatusMessage("Restarting game reason: " reason)
 	
 	adbShell.StdIn.WriteLine("am force-stop jp.pokemon.pokemontcgp")
@@ -1328,12 +1302,12 @@ checkBorder(wonderpick := true) {
 		searchVariation := 5
 	}
 	else {
-		Sleep, 2000
+		Sleep, 1000
 		searchVariation := 15
 	}
 	pBitmap := from_window(WinExist(winTitle))
 	Path = %A_ScriptDir%\%defaultLanguage%\Border.png
-	pNeedle := Gdip_CreateBitmapFromFile(Path)
+	pNeedle := GetNeedle(Path)
 	; ImageSearch within the region
 	if (scaleParam = 277) { ; 125% scale
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 20, 284, 90, 286, searchVariation)
@@ -1341,7 +1315,6 @@ checkBorder(wonderpick := true) {
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 20, 284-6, 90, 286-6, searchVariation)
 		;bboxAndPause(20, 284-6, 90, 286-6)
 	}
-	Gdip_DisposeImage(pNeedle)
 	Gdip_DisposeImage(pBitmap)
 	if (vRet = 1) {
 		CreateStatusMessage("Not a God Pack ")
@@ -1350,7 +1323,7 @@ checkBorder(wonderpick := true) {
 		;pause (should pause if first card is not 1 or 2 diamonds)
 		pBitmap := from_window(WinExist(winTitle))
 		Path = %A_ScriptDir%\%defaultLanguage%\Border.png
-		pNeedle := Gdip_CreateBitmapFromFile(Path)
+		pNeedle := GetNeedle(Path)
 		; ImageSearch within the region
 		if (scaleParam = 277) { ; 125% scale
 			vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 103, 284, 173, 286, searchVariation)
@@ -1358,7 +1331,6 @@ checkBorder(wonderpick := true) {
 			vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 103, 284-6, 173, 286-6, searchVariation)
 			;bboxAndPause(103, 284-6, 173, 286-6)
 		}
-		Gdip_DisposeImage(pNeedle)
 		Gdip_DisposeImage(pBitmap)
 		if (vRet = 1) {
 			CreateStatusMessage("Not a God Pack ")
@@ -1373,10 +1345,9 @@ checkBorder(wonderpick := true) {
 					} else {
 						Path = %A_ScriptDir%\Skip\100\%A_Index%.png
 					}
-					pNeedle := Gdip_CreateBitmapFromFile(Path)
+					pNeedle := GetNeedle(Path)
 					vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, 5, 165, 265, 405, searchVariation)
 					;bboxAndPause(5, 165, 265, 405, True)
-					Gdip_DisposeImage(pNeedle)
 					Gdip_DisposeImage(pBitmap)
 					if (vRet = 1) {
 						invalidGP := true
@@ -1423,40 +1394,7 @@ checkBorder(wonderpick := true) {
 
 saveAccount(file := "Valid") {
 	global adbShell, adbPath, adbPort
-	RetryCount := 0
-	MaxRetries := 10
-	Loop {
-		try {
-			if (!adbShell) {
-				adbShell := ComObjCreate("WScript.Shell").Exec(adbPath . " -s 127.0.0.1:" . adbPort . " shell")
-				; Extract the Process ID
-				processID := adbShell.ProcessID
-
-				; Wait for the console window to open using the process ID
-				WinWait, ahk_pid %processID%
-
-				; Minimize the window using the process ID
-				WinMinimize, ahk_pid %processID%
-				
-				adbShell.StdIn.WriteLine("su")
-			}
-			else if (adbShell.Status != 0) {
-				Sleep, 1000
-			}
-			else {
-				break
-			}
-		}
-		catch {
-			RetryCount++
-			if(RetryCount > MaxRetries) {
-				CreateStatusMessage("Failed to connect to shell")
-				Pause
-			}
-		}
-		Sleep, 1000
-	}
-	
+	initializeAdbShell()
 	
 	saveDir := A_ScriptDir "\..\Accounts\" . A_Now . "_" . winTitle . "_" . file . "_" . packs . "_packs.xml"
 	count := 0
@@ -1490,39 +1428,7 @@ saveAccount(file := "Valid") {
 
 adbClick(X, Y) {
 	global adbShell, setSpeed, adbPath, adbPort
-	RetryCount := 0
-	MaxRetries := 10
-	Loop {
-		try {
-			if (!adbShell) {
-				adbShell := ComObjCreate("WScript.Shell").Exec(adbPath . " -s 127.0.0.1:" . adbPort . " shell")
-				; Extract the Process ID
-				processID := adbShell.ProcessID
-
-				; Wait for the console window to open using the process ID
-				WinWait, ahk_pid %processID%
-
-				; Minimize the window using the process ID
-				WinMinimize, ahk_pid %processID%
-				
-				adbShell.StdIn.WriteLine("su")
-			}
-			else if (adbShell.Status != 0) {
-				Sleep, 1000
-			}
-			else {
-				break
-			}
-		}
-		catch {
-			RetryCount++
-			if(RetryCount > MaxRetries) {
-				CreateStatusMessage("Failed to connect to shell")
-				Pause
-			}
-		}
-		Sleep, 1000
-	}
+	initializeAdbShell()
 	X := Round(X / 277 * 540)
     Y := Round((Y - 44) / 489 * 960) 
 	adbShell.StdIn.WriteLine("input tap " X " " Y)
@@ -1535,77 +1441,13 @@ ControlClick(X, Y) {
 
 adbName() {
 	global Name, adbShell, adbPath, adbPort
-	RetryCount := 0
-	MaxRetries := 10
-	Loop {
-		try {
-			if (!adbShell) {
-				adbShell := ComObjCreate("WScript.Shell").Exec(adbPath . " -s 127.0.0.1:" . adbPort . " shell")
-				; Extract the Process ID
-				processID := adbShell.ProcessID
-
-				; Wait for the console window to open using the process ID
-				WinWait, ahk_pid %processID%
-
-				; Minimize the window using the process ID
-				WinMinimize, ahk_pid %processID%
-				
-				adbShell.StdIn.WriteLine("su")
-			}
-			else if (adbShell.Status != 0) {
-				Sleep, 1000
-			}
-			else {
-				break
-			}
-		}
-		catch {
-			RetryCount++
-			if(RetryCount > MaxRetries) {
-				CreateStatusMessage("Failed to connect to shell")
-				Pause
-			}
-		}
-		Sleep, 1000
-	}
+	initializeAdbShell()
 	adbShell.StdIn.WriteLine("input text " Name )
 }
 
 adbSwipeUp() {
 	global adbShell, adbPath, adbPort
-	RetryCount := 0
-	MaxRetries := 10
-	Loop {
-		try {
-			if (!adbShell) {
-				adbShell := ComObjCreate("WScript.Shell").Exec(adbPath . " -s 127.0.0.1:" . adbPort . " shell")
-				; Extract the Process ID
-				processID := adbShell.ProcessID
-
-				; Wait for the console window to open using the process ID
-				WinWait, ahk_pid %processID%
-
-				; Minimize the window using the process ID
-				WinMinimize, ahk_pid %processID%
-				
-				adbShell.StdIn.WriteLine("su")
-			}
-			else if (adbShell.Status != 0) {
-				Sleep, 1000
-			}
-			else {
-				break
-			}
-		}
-		catch {
-			RetryCount++
-			if(RetryCount > MaxRetries) {
-				CreateStatusMessage("Failed to connect to shell")
-				Pause
-			}
-		}
-		Sleep, 1000
-	}
+	initializeAdbShell()
 	adbShell.StdIn.WriteLine("input swipe 309 816 309 355 60") 
 	;adbShell.StdIn.WriteLine("input swipe 309 816 309 555 30")	
 	Sleep, 150
@@ -1613,39 +1455,7 @@ adbSwipeUp() {
 
 adbSwipe() {
 	global adbShell, setSpeed, swipeSpeed, adbPath, adbPort
-	RetryCount := 0
-	MaxRetries := 10
-	Loop {
-		try {
-			if (!adbShell) {
-				adbShell := ComObjCreate("WScript.Shell").Exec(adbPath . " -s 127.0.0.1:" . adbPort . " shell")
-				; Extract the Process ID
-				processID := adbShell.ProcessID
-
-				; Wait for the console window to open using the process ID
-				WinWait, ahk_pid %processID%
-
-				; Minimize the window using the process ID
-				WinMinimize, ahk_pid %processID%
-				
-				adbShell.StdIn.WriteLine("su")
-			}
-			else if (adbShell.Status != 0) {
-				Sleep, 1000
-			}
-			else {
-				break
-			}
-		}
-		catch {
-			RetryCount++
-			if(RetryCount > MaxRetries) {
-				CreateStatusMessage("Failed to connect to shell")
-				Pause
-			}
-		}
-		Sleep, 1000
-	}
+	initializeAdbShell()
 	X1 := 35
 	Y1 := 327
 	X2 := 267
@@ -1897,13 +1707,7 @@ from_window(ByRef image) {
 ~F8::ToggleTestScript()
 ;~F9::restartGameInstance("F9")
 
-~F10::TakeScreenCrop()
-
-TakeScreenCrop()
-{
-	global takeScreen
-	takeScreen := true
-}
+;~F10::ToggleLanguageScreenTaking()
 
 bboxAndPause(X1, Y1, X2, Y2, doPause := False) {
 	BoxWidth := X2-X1
@@ -1932,4 +1736,67 @@ bboxAndPause(X1, Y1, X2, Y2, doPause := False) {
 	}
 
     Gui, BoundingBox:Destroy
+}
+
+; Function to initialize ADB Shell
+initializeAdbShell() {
+	global adbShell, adbPath, adbPort
+	RetryCount := 0
+	MaxRetries := 10
+	Loop {
+		try {
+			if (!adbShell) {
+				adbShell := ComObjCreate("WScript.Shell").Exec(adbPath . " -s 127.0.0.1:" . adbPort . " shell")
+				; Extract the Process ID
+				processID := adbShell.ProcessID
+
+				; Wait for the console window to open using the process ID
+				WinWait, ahk_pid %processID%
+
+				; Minimize the window using the process ID
+				WinMinimize, ahk_pid %processID%
+				
+				adbShell.StdIn.WriteLine("su")
+			}
+			else if (adbShell.Status != 0) {
+				Sleep, 1000
+			}
+			else {
+				break
+			}
+		}
+		catch {
+			RetryCount++
+			if(RetryCount > MaxRetries) {
+				CreateStatusMessage("Failed to connect to shell")
+				Pause
+			}
+		}
+		Sleep, 1000
+	}
+}
+
+GetNeedle(Path) {
+	global NeedleBitmaps := Object()
+	if (NeedleBitmaps.HasKey(Path)) {
+		return NeedleBitmaps[Path]
+	} else {
+		pNeedle := Gdip_CreateBitmapFromFile(Path)
+		NeedleBitmaps[Path] := pNeedle
+		return pNeedle
+	}
+}
+
+
+ToggleLanguageScreenTaking()
+{
+	global takeLanguageScreens
+	if(!takeLanguageScreens) {
+		CreateStatusMessage("Taking Language Screens")
+		takeLanguageScreens := true
+	}
+	else {
+		CreateStatusMessage("Stopping Screens")
+		takeLanguageScreens := false
+	}
 }

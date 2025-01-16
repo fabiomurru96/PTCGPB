@@ -94,7 +94,7 @@ if (defaultLanguage = "English") {
 } else if (defaultLanguage = "Japanese100") {
     defaultLang := 9
     scaleParam := 287
-} else if (defaultLanguage = "Japanese100") {
+} else if (defaultLanguage = "Chinese100") {
     defaultLang := 10
     scaleParam := 287
 }
@@ -359,7 +359,7 @@ Loop {
 	totalSeconds := Round((A_TickCount - rerollTime) / 1000) ; Total time in seconds
 	mminutes := Floor(totalSeconds / 60)
 	if(total = 0)
-	total := "0                "
+	total := "0                                "
 	CreateStatusMessage("Time: " . mminutes . "m Packs: " . total, 5, 490)
 	Sleep, 10000
 }
