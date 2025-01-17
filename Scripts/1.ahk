@@ -996,7 +996,7 @@ else {
 return
 
 CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL := 1, safeTime := 0) {
-	global winTitle, Variation, failSafe
+	global winTitle, Variation, failSafe, takeLanguageScreens
 	if(searchVariation = "")
 		searchVariation := Variation
 	imagePath := A_ScriptDir . "\" . defaultLanguage . "\"
@@ -1025,6 +1025,16 @@ CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL
 
 	; ImageSearch within the region
 	vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, X1, Y1, X2, Y2, searchVariation)
+
+	if(takeLanguageScreens)
+	{
+		global NeedleBitmaps
+		pCropped := Gdip_CloneBitmapArea(pBitmap,X1,Y1,X2-X1,Y2-Y1)
+		SaveLanguageScreen(pCropped, imageName)
+		NeedleBitmaps.Delete(Path) ; Delete from Map and dispose to be able to substitute the needle
+		Gdip_DisposeImage(pNeedle)
+	}
+
 	Gdip_DisposeImage(pBitmap)
 	if(EL = 0)
 		GDEL := 1
@@ -1054,7 +1064,7 @@ CheckInstances(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", EL
 }
 
 KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx := 0, clicky := 0, sleepTime := "", skip := false, safeTime := 0) {
-	global winTitle, Variation, failSafe, confirmed
+	global winTitle, Variation, failSafe, confirmed, takeLanguageScreens
 	if(searchVariation = "")
 		searchVariation := Variation
 	if (sleepTime = "") {
@@ -1120,6 +1130,16 @@ KeepSync(X1, Y1, X2, Y2, searchVariation := "", imageName := "DEFAULT", clickx :
 		;bboxAndPause(X1, Y1, X2, Y2)
 		; ImageSearch within the region
 		vRet := Gdip_ImageSearch(pBitmap, pNeedle, vPosXY, X1, Y1, X2, Y2, searchVariation)
+
+		if(takeLanguageScreens)
+		{
+			global NeedleBitmaps
+			pCropped := Gdip_CloneBitmapArea(pBitmap,X1,Y1,X2-X1,Y2-Y1)
+			SaveLanguageScreen(pCropped, imageName)
+			NeedleBitmaps.Delete(Path) ; Delete from Map and dispose to be able to substitute the needle
+			Gdip_DisposeImage(pNeedle)
+		}
+
 		Gdip_DisposeImage(pBitmap)
 		if (!confirmed && vRet = 1) {
 			confirmed := true
@@ -1684,6 +1704,7 @@ from_window(ByRef image) {
 ~F7::ExitApp
 ~F8::ToggleTestScript()
 ;~F9::restartGameInstance("F9")
+;~F10::ToggleLanguageScreenTaking()
 
 bboxAndPause(X1, Y1, X2, Y2, doPause := False) {
 	BoxWidth := X2-X1
@@ -1753,7 +1774,10 @@ initializeAdbShell() {
 }
 
 GetNeedle(Path) {
-	static NeedleBitmaps := Object()
+	global NeedleBitmaps
+	if(!NeedleBitmaps)
+		NeedleBitmaps := Object()
+
 	if (NeedleBitmaps.HasKey(Path)) {
 		return NeedleBitmaps[Path]
 	} else {
@@ -1761,4 +1785,27 @@ GetNeedle(Path) {
 		NeedleBitmaps[Path] := pNeedle
 		return pNeedle
 	}
+}
+
+
+ToggleLanguageScreenTaking()
+{
+	global takeLanguageScreens
+	if(!takeLanguageScreens) {
+		CreateStatusMessage("Taking Language Screens")
+		takeLanguageScreens := true
+	}
+	else {
+		CreateStatusMessage("Stopping Language Screens")
+		takeLanguageScreens := false
+	}
+}
+
+SaveLanguageScreen(pBitmap, imageName) {
+	tempLangScreenDir := A_ScriptDir "\TempScreens\" defaultLanguage 
+	if !FileExist(tempLangScreenDir)
+		FileCreateDir, %tempLangScreenDir%
+
+	Gdip_SaveBitmapToFile(pBitmap, tempLangScreenDir "\" imageName ".png")
+	Gdip_DisposeImage(pBitmap)
 }
